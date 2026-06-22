@@ -6,15 +6,6 @@ SERVER_BASE="http://192.168.0.1"
 DATA_URL="${SERVER_BASE}/data.json"
 WIFI_IFACE="en0"
 
-cleanup() {
-    echo "Disconnecting from Switch network..."
-    networksetup -removepreferredwirelessnetwork "$WIFI_IFACE" "$TARGET_SSID" 2>/dev/null || true
-    networksetup -setairportpower "$WIFI_IFACE" off 2>/dev/null
-    networksetup -setairportpower "$WIFI_IFACE" on 2>/dev/null
-    echo "Wifi toggled — macOS will auto-rejoin your preferred network."
-}
-trap cleanup EXIT
-
 if [[ "$(uname)" != "Darwin" ]]; then
     echo "Error: this script only works on macOS." >&2
     exit 1
@@ -25,13 +16,21 @@ if [[ $# -lt 1 ]]; then
     exit 1
 fi
 
-WIFI_PASSWORD="$1"
-
 if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq is required. Install with: brew install jq" >&2
     exit 1
 fi
 
+cleanup() {
+    echo "Disconnecting from Switch network..."
+    networksetup -removepreferredwirelessnetwork "$WIFI_IFACE" "$TARGET_SSID" 2>/dev/null || true
+    networksetup -setairportpower "$WIFI_IFACE" off 2>/dev/null
+    networksetup -setairportpower "$WIFI_IFACE" on 2>/dev/null
+    echo "Wifi toggled — macOS will auto-rejoin your preferred network."
+}
+trap cleanup EXIT
+
+WIFI_PASSWORD="$1"
 SCAN_ATTEMPTS=10
 echo "Scanning for networks matching '${SSID_PREFIX}*' (up to $SCAN_ATTEMPTS attempts)..."
 TARGET_SSID=$(SCAN_PREFIX="$SSID_PREFIX" SCAN_MAX="$SCAN_ATTEMPTS" SCAN_PASS="$WIFI_PASSWORD" swift -e '
